@@ -1,4 +1,5 @@
 * Image Storage
+[[https://github.com/iliayar/image-storage/workflows/build/badge.svg]]
 ** Web application
 ** Telegram Bot
 - bind webhook

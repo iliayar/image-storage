@@ -31,16 +31,12 @@ import Data.Version (showVersion)
 import qualified Paths_Bot as P
 import System.IO
 
--- We needed those language extensions to make it as simple as that
 data Version = Version
   { version :: Text
   } deriving (Show, Generic)
 
 instance ToJSON Version
 
--- At the moment Bot API consists of only version resource
--- that returns Version data record as JSON.
--- Thanks to Generic and ToJSON deriving Servant knows how
 type BotAPI = "version" :> Get '[JSON] Version
          :<|> "webhook"
               :> Capture "secret" Text
