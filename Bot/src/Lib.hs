@@ -99,16 +99,25 @@ handleUpdate update = do
     liftIO $ hFlush stdout
 
 handlePhotos :: [PhotoSize] -> Bot ()
-handlePhotos = liftIO . (mapM_ $ putStrLn . T.unpack . photo_file_id)
+handlePhotos = fetchPhotoPath . head . reverse
 
-fetchPhotoPath :: PhotoSize -> IO ()
+filterBiggest :: [PhotoSize] -> [PhotoSize]
+filterBiggest [] = []
+filterBiggest photos@((PhotoSize { photo_file_id = id}):xs) =
+  (head $ fst s) : (filterBiggest $ snd s)
+  where
+    s = span (\PhotoSize {photo_file_id = x} -> x == id) photos
+
+fetchPhotoPath :: PhotoSize -> Bot ()
 fetchPhotoPath PhotoSize { photo_file_id = id } = do
   BotConfig{..} <- ask
-  let fileRequest = getFileRequest id
-  resp <- runClient (getFileM fileRequest) telegramToken manager
-  case resp of
+  resp <- liftIO $ getFile telegramToken id manager
+  liftIO $ case resp of
     Left err -> putStrLn $ show err
-    Right x -> putStrLn $ show x
+    Right (Response {result = File {file_path = Just path}}) -> putStrLn $ "http://api.telegram.org/file/" ++ (getStringToken telegramToken) ++ "/" ++ (T.unpack path)
+    Right (Response {result = File {file_path = Nothing}}) -> putStrLn $ "No file path in response"
+  where
+    getStringToken (Token s) = T.unpack s
 
 handleMessage :: Message -> Bot ()
 handleMessage msg = liftIO . putStrLn $ case (text msg) of
