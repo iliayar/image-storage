@@ -1,0 +1,10 @@
+* Image Storage
+** Web application
+** Telegram Bot
+- bind webhook
+  - Manual
+    ~curl "https://api.telegram.org/bot${TOKEN}/setWebhook?url=<PUBLIC_ADDRESS>/bot/webhook/bot${TOKEN}"~
+- create /.env/ file:
+#+BEGIN_SRC shell
+TELEGRAM_TOKEN="<YOUR_TOKEN>"
+#+END_SRC
