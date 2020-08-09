@@ -93,5 +93,24 @@ botServer = returnVersion :<|> handleWebhook
 handleUpdate :: Update -> Bot ()
 handleUpdate update = do
     case update of
---      Update { ... } more cases will go here
-        _ -> liftIO $ ((putStrLn $ "Handle update failed. " ++ show update) >> hFlush stdout)
+      Update {message = Just (Message { photo = Just xs })} -> handlePhotos xs
+      Update {message = Just msg } -> handleMessage msg
+      _ -> liftIO (putStrLn $ "Handle update failed. " ++ show update)
+    liftIO $ hFlush stdout
+
+handlePhotos :: [PhotoSize] -> Bot ()
+handlePhotos = liftIO . (mapM_ $ putStrLn . T.unpack . photo_file_id)
+
+fetchPhotoPath :: PhotoSize -> IO ()
+fetchPhotoPath PhotoSize { photo_file_id = id } = do
+  BotConfig{..} <- ask
+  let fileRequest = getFileRequest id
+  resp <- runClient (getFileM fileRequest) telegramToken manager
+  case resp of
+    Left err -> putStrLn $ show err
+    Right x -> putStrLn $ show x
+
+handleMessage :: Message -> Bot ()
+handleMessage msg = liftIO . putStrLn $ case (text msg) of
+                      Just x -> "New message " ++ (T.unpack x)
+                      Nothing -> "Mes"
