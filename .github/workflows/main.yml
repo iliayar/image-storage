@@ -12,9 +12,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
+    - run: echo "123456789:abcdefghijklmoonpqrstuvwxyz" > .env
     - run: docker-compose pull
     - uses: satackey/action-docker-layer-caching@v0.0.5
     - name: Docker build
-      run: |
-        echo "123456789:abcdefghijklmoonpqrstuvwxyz" > .env
-        docker-compose up -d --build
+      run: docker-compose up -d --build
