@@ -93,14 +93,53 @@ botServer = returnVersion :<|> handleWebhook
 
 handleUpdate :: Update -> Bot ()
 handleUpdate update = do
-  let username = T.unpack $ fromJust $ user_username $ fromJust $ from $ fromJust $ message update
-      processDownload (Just (url, filename)) = liftIO $ downloadImage username "test" filename url
   case update of
-      Update {message = Just (Message { photo = Just xs })} -> (fetchFilePath $ head $ reverse xs) >>= processDownload
-      Update {message = Just (Message { document = Just xs})} -> (fetchFilePath xs) >>= processDownload
-      Update {message = Just (Message { text = Just _}) } -> handleMessage $ fromJust $ message update
+      Update {message = Just msg@(Message { photo = Just xs })} -> handleImageMessage msg
+      Update {message = Just msg@(Message { document = Just x@(Document { doc_mime_type = Just (T.stripPrefix "image" -> Just _)})})} -> handleImageMessage msg
+      Update {message = Just msg@(Message { text = Just _}) } -> handleMessage msg
+      Update {callback_query = Just q} -> handleCallback q
       _ -> liftIO (putStrLn $ "Handle update failed. " ++ show update)
   liftIO $ hFlush stdout
+
+handleCallback :: CallbackQuery -> Bot ()
+handleCallback (CallbackQuery
+                { cq_id = cqId
+                , cq_from = (User {user_username = Just username})
+                , cq_message = Just (Message {chat = (Chat {chat_id = chatId}), text = Just (T.lines -> (filename:_))})
+                , cq_data = Just category
+                }) = do
+  liftIO $ putStrLn $ T.unpack username
+  liftIO $ putStrLn $ T.unpack filename
+  liftIO $ putStrLn $ T.unpack category
+   
+
+sendInlineMessage :: ChatId -> String -> String -> Bot ()
+sendInlineMessage chatId username filename = do
+  BotConfig{..} <- ask
+  categories <- liftIO $ listCategories username
+  let keyboard = ReplyInlineKeyboardMarkup $ map
+        (\t -> [(InlineKeyboardButton (T.pack t) Nothing (Just $ T.pack $ t) Nothing  Nothing Nothing Nothing)]) categories
+  liftIO $ sendMessage telegramToken
+    (SendMessageRequest chatId (T.pack $ "`" ++ filename ++ "`\nIngore above") (Just Markdown) Nothing Nothing Nothing (Just keyboard)) manager
+  liftIO $ return ()
+
+handleImageMessage :: Message -> Bot ()
+handleImageMessage msg = do
+  BotConfig{..} <- ask
+  let host = "https://bcbc6b25b466.ngrok.io" -- FIXME
+      chatId = ChatId $ fromIntegral $ user_id $ fromJust $ from msg
+      username = T.unpack $ fromJust $ user_username $ fromJust $ from msg
+      processDownload (Just (url, filename)) =
+        do
+          -- Send message with keyboard here
+          sendInlineMessage chatId username filename
+          -- liftIO $ sendMessage telegramToken (sendMessageRequest chatId $ T.pack $ "Your image " ++ host ++ "/static/" ++ username ++ "/test/" ++ filename) manager
+          liftIO $ downloadImage username "test" filename url
+  case msg of
+    Message { photo = Just xs } -> (fetchFilePath $ head $ reverse xs) >>= processDownload
+    Message { document = Just x} -> (fetchFilePath x) >>= processDownload
+  return ()
+    
 
 handleMessage :: Message -> Bot ()
 handleMessage msg = do
