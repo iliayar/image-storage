@@ -11,6 +11,10 @@
   #+BEGIN_SRC shell
   TELEGRAM_TOKEN="<YOUR_TOKEN>"
   #+END_SRC
-** TODO Task [0/2]
-- [ ] Choose storage structure
+** TODO Task [0/3]
+- [-] Categories
+  - [ ] Create
+  - [ ] Delete
+  - [X] List
+- [ ] Reply with keyboard
 - [ ] Downloading files

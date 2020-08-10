@@ -27,6 +27,7 @@ source-repository head
 library
   exposed-modules:
       Lib
+      Storage
   other-modules:
       Paths_Bot
   hs-source-dirs:
@@ -38,6 +39,8 @@ library
     , http-client-tls
     , mtl
     , servant-server
+    , directory
+    , filepath
     , telegram-api >=0.6.3.0
     , text
     , transformers

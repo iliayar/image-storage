@@ -30,6 +30,7 @@ import System.Environment
 import Data.Version (showVersion)
 import qualified Paths_Bot as P
 import System.IO
+import Storage
 
 data Version = Version
   { version :: Text
@@ -93,13 +94,24 @@ botServer = returnVersion :<|> handleWebhook
 handleUpdate :: Update -> Bot ()
 handleUpdate update = do
     case update of
-      Update {message = Just (Message { photo = Just xs })} -> handlePhotos xs
-      Update {message = Just msg } -> handleMessage msg
+      Update {message = Just (Message { photo = Just xs })} -> fetchFilePath $ head $ reverse xs
+      Update {message = Just (Message { document = Just xs})} -> fetchFilePath xs
+      Update {message = Just (Message { text = Just _}) } -> handleMessage $ fromJust $ message update
       _ -> liftIO (putStrLn $ "Handle update failed. " ++ show update)
     liftIO $ hFlush stdout
 
-handlePhotos :: [PhotoSize] -> Bot ()
-handlePhotos = fetchPhotoPath . head . reverse
+handleMessage :: Message -> Bot ()
+handleMessage msg = do
+  BotConfig{..} <- ask
+  let chatId = ChatId $ fromIntegral $ user_id $ fromJust $ from msg
+      username = T.unpack $ user_first_name $ fromJust $ from msg
+      sendCategories = do
+        categories <- liftIO $ listCategories username
+        sendMessage telegramToken (sendMessageRequest chatId $ T.pack $ unlines categories) manager
+  case fromJust $ text msg of
+    (T.stripPrefix "/list" -> Just _) -> liftIO sendCategories >> return ()
+    _ -> liftIO $ putStrLn $ show msg
+  return ()
 
 filterBiggest :: [PhotoSize] -> [PhotoSize]
 filterBiggest [] = []
@@ -108,8 +120,18 @@ filterBiggest photos@((PhotoSize { photo_file_id = id}):xs) =
   where
     s = span (\PhotoSize {photo_file_id = x} -> x == id) photos
 
-fetchPhotoPath :: PhotoSize -> Bot ()
-fetchPhotoPath PhotoSize { photo_file_id = id } = do
+class Fetchable a where
+  getFileId :: a -> Text
+
+instance Fetchable PhotoSize where
+  getFileId PhotoSize { photo_file_id = id } = id
+
+instance Fetchable Document where
+  getFileId Document { doc_file_id = id } = id
+
+fetchFilePath :: Fetchable a => a -> Bot ()
+fetchFilePath f = do
+  let id = getFileId f
   BotConfig{..} <- ask
   resp <- liftIO $ getFile telegramToken id manager
   liftIO $ case resp of
@@ -118,8 +140,3 @@ fetchPhotoPath PhotoSize { photo_file_id = id } = do
     Right (Response {result = File {file_path = Nothing}}) -> putStrLn $ "No file path in response"
   where
     getStringToken (Token s) = T.unpack s
-
-handleMessage :: Message -> Bot ()
-handleMessage msg = liftIO . putStrLn $ case (text msg) of
-                      Just x -> "New message " ++ (T.unpack x)
-                      Nothing -> "Mes"
