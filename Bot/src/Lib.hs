@@ -110,15 +110,10 @@ handleMessage msg = do
         sendMessage telegramToken (sendMessageRequest chatId $ T.pack $ unlines categories) manager
   case fromJust $ text msg of
     (T.stripPrefix "/list" -> Just _) -> liftIO sendCategories >> return ()
+    (T.stripPrefix "/new " -> Just (T.unpack -> c)) -> liftIO (createCategory username c) >> return ()
+    (T.stripPrefix "/delete " -> Just (T.unpack -> c)) -> liftIO (deleteCategory username c) >> return ()
     _ -> liftIO $ putStrLn $ show msg
   return ()
-
-filterBiggest :: [PhotoSize] -> [PhotoSize]
-filterBiggest [] = []
-filterBiggest photos@((PhotoSize { photo_file_id = id}):xs) =
-  (head $ fst s) : (filterBiggest $ snd s)
-  where
-    s = span (\PhotoSize {photo_file_id = x} -> x == id) photos
 
 class Fetchable a where
   getFileId :: a -> Text
