@@ -17,4 +17,7 @@
   - [X] Delete
   - [X] List
 - [ ] Reply with keyboard
-- [ ] Downloading files
+- [-] Downloading files
+  - [X] File Download
+  - [ ] Add more error handling
+  - [ ] Integration with inline keyboard

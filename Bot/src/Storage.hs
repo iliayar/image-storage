@@ -2,10 +2,12 @@ module Storage
   ( listCategories
   , createCategory
   , deleteCategory
+  , downloadImage
   )
   
 where
 
+import Network.HTTP.Client.Conduit.Download
 import System.Directory
 import System.FilePath
 import System.IO.Error
@@ -45,3 +47,5 @@ deleteCategory user c = checkTraversal [user, c] () $ do
     Left err -> putStrLn (show err) >> return ()
     Right _ -> return ()
   
+downloadImage :: FilePath -> FilePath -> FilePath -> String -> IO ()
+downloadImage user c filename url = download url $ "static" </> user </> c </> filename

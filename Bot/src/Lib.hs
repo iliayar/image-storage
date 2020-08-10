@@ -93,18 +93,20 @@ botServer = returnVersion :<|> handleWebhook
 
 handleUpdate :: Update -> Bot ()
 handleUpdate update = do
-    case update of
-      Update {message = Just (Message { photo = Just xs })} -> fetchFilePath $ head $ reverse xs
-      Update {message = Just (Message { document = Just xs})} -> fetchFilePath xs
+  let username = T.unpack $ fromJust $ user_username $ fromJust $ from $ fromJust $ message update
+      processDownload (Just (url, filename)) = liftIO $ downloadImage username "test" filename url
+  case update of
+      Update {message = Just (Message { photo = Just xs })} -> (fetchFilePath $ head $ reverse xs) >>= processDownload
+      Update {message = Just (Message { document = Just xs})} -> (fetchFilePath xs) >>= processDownload
       Update {message = Just (Message { text = Just _}) } -> handleMessage $ fromJust $ message update
       _ -> liftIO (putStrLn $ "Handle update failed. " ++ show update)
-    liftIO $ hFlush stdout
+  liftIO $ hFlush stdout
 
 handleMessage :: Message -> Bot ()
 handleMessage msg = do
   BotConfig{..} <- ask
   let chatId = ChatId $ fromIntegral $ user_id $ fromJust $ from msg
-      username = T.unpack $ user_first_name $ fromJust $ from msg
+      username = T.unpack $ fromJust $ user_username $ fromJust $ from msg
       sendCategories = do
         categories <- liftIO $ listCategories username
         sendMessage telegramToken (sendMessageRequest chatId $ T.pack $ unlines categories) manager
@@ -124,14 +126,15 @@ instance Fetchable PhotoSize where
 instance Fetchable Document where
   getFileId Document { doc_file_id = id } = id
 
-fetchFilePath :: Fetchable a => a -> Bot ()
+fetchFilePath :: Fetchable a => a -> Bot (Maybe (String, String))
 fetchFilePath f = do
   let id = getFileId f
   BotConfig{..} <- ask
   resp <- liftIO $ getFile telegramToken id manager
   liftIO $ case resp of
-    Left err -> putStrLn $ show err
-    Right (Response {result = File {file_path = Just path}}) -> putStrLn $ "http://api.telegram.org/file/" ++ (getStringToken telegramToken) ++ "/" ++ (T.unpack path)
-    Right (Response {result = File {file_path = Nothing}}) -> putStrLn $ "No file path in response"
+    Left err -> return Nothing
+    Right (Response {result = File {file_path = Just path}}) -> return $
+      Just ("http://api.telegram.org/file/" ++ (getStringToken telegramToken) ++ "/" ++ (T.unpack path), T.unpack $ getFileId f)
+    Right (Response {result = File {file_path = Nothing}}) -> return Nothing
   where
     getStringToken (Token s) = T.unpack s
