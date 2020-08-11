@@ -20,6 +20,7 @@ import GHC.Generics hiding (from)
 import Control.Monad.Reader
 import Control.Monad.Except
 import Data.Text (Text)
+import Data.List
 import qualified Data.Text as T
 import Network.HTTP.Client (newManager, Manager)
 import Network.HTTP.Client.TLS  (tlsManagerSettings)
@@ -97,6 +98,7 @@ handleUpdate update = do
   case update of
       Update {message = Just msg@(Message { photo = Just xs })} -> handleImageMessage msg
       Update {message = Just msg@(Message { document = Just x@(Document { doc_mime_type = Just (T.stripPrefix "image" -> Just _)})})} -> handleImageMessage msg
+      -- Update {message = Just msg@(Message { document = Just x@(Document { doc_mime_type = Just (T.stripPrefix "video" -> Just _)})})} -> handleImageMessage msg
       Update {message = Just msg@(Message { text = Just _}) } -> handleMessage msg
       Update {callback_query = Just q} -> handleCallback q
       _ -> liftIO (putStrLn $ "Handle update failed. " ++ show update)
@@ -113,25 +115,36 @@ handleCallback (CallbackQuery
                 , cq_data = Just (T.unpack -> category)
                 }) = do
   BotConfig{..} <- ask
-  let host = "https://7ef599ed6e6b.ngrok.io"
+  let host = "https://a8aedc133388.ngrok.io"
+      answerQuery s = answerCallbackQuery telegramToken (AnswerCallbackQueryRequest cqId (Just s) Nothing Nothing Nothing) manager
       processDownload (Just (url, filename)) = do
         liftIO $ downloadImage username category filename url
-        liftIO $ answerCallbackQuery telegramToken (AnswerCallbackQueryRequest cqId (Just "File saved") Nothing Nothing Nothing) manager
-        liftIO $ sendMessage telegramToken (sendMessageRequest (ChatId $ fromIntegral chatId) $ T.pack $ "Your image " ++ host ++ "/static/" ++ username ++ "/test/" ++ filename) manager
+        liftIO $ answerQuery "File saved"
+        liftIO $ sendMessage telegramToken (sendMessageRequest (ChatId $ fromIntegral chatId) $ T.pack $ "Your image " ++ intercalate "/" [host, "static", username, category, filename]) manager
+        return ()
   case replMsg of
     Message { photo = Just xs } -> (fetchFilePath $ head $ reverse xs) >>= processDownload
     Message { document = Just x } -> (fetchFilePath x) >>= processDownload
+    Message { text = Just (T.stripPrefix "/delete" -> Just _)} -> liftIO $ deleteCategory username category >> answerQuery "Category deleted" >> return ()
   return ()
    
 
-sendInlineMessage :: Int -> ChatId -> String -> Bot ()
-sendInlineMessage messageId chatId username = do
+sendInlineForceReplyMessage :: Text -> Int -> ChatId -> Bot ()
+sendInlineForceReplyMessage text messageId chatId = do
+  BotConfig{..} <- ask
+  liftIO $ sendMessage telegramToken
+    (SendMessageRequest chatId text Nothing Nothing Nothing (Just messageId) (Just $ ForceReply True Nothing)) manager
+  return ()
+  
+
+sendInlineMessage :: Text -> Int -> ChatId -> String -> Bot ()
+sendInlineMessage text messageId chatId username = do
   BotConfig{..} <- ask
   categories <- liftIO $ listCategories username
   let keyboard = ReplyInlineKeyboardMarkup $ map
         (\t -> [(InlineKeyboardButton (T.pack t) Nothing (Just $ T.pack $ t) Nothing  Nothing Nothing Nothing)]) categories
   liftIO $ sendMessage telegramToken
-    (SendMessageRequest chatId "Choose the category to save image in" (Just Markdown) Nothing Nothing (Just messageId) (Just keyboard)) manager
+    (SendMessageRequest chatId text Nothing Nothing Nothing (Just messageId) (Just keyboard)) manager
   return ()
 
 handleImageMessage :: Message -> Bot ()
@@ -139,7 +152,7 @@ handleImageMessage msg@(Message {message_id = messageId}) = do
   BotConfig{..} <- ask
   let chatId = ChatId $ fromIntegral $ user_id $ fromJust $ from msg
       username = T.unpack $ fromJust $ user_username $ fromJust $ from msg
-  sendInlineMessage messageId chatId username
+  sendInlineMessage "Choose category to save image in" messageId chatId username
   return ()
     
 
@@ -151,11 +164,15 @@ handleMessage msg@(Message {message_id = messageId}) = do
       sendCategories = do
         categories <- liftIO $ listCategories username
         sendMessage telegramToken (sendMessageRequest chatId $ T.pack $ unlines categories) manager
-  case fromJust $ text msg of
-    (T.stripPrefix "/list" -> Just _) -> liftIO sendCategories >> return ()
-    (T.stripPrefix "/new " -> Just (T.unpack -> c)) -> liftIO (createCategory username c) >> return ()
-    (T.stripPrefix "/delete " -> Just (T.unpack -> c)) -> liftIO (deleteCategory username c) >> return ()
-    _ -> liftIO $ putStrLn $ show msg
+  case msg of
+    Message { text = Just (T.unpack -> c)
+            , reply_to_message = Just (Message { text = Just (T.stripPrefix "Choose name" -> Just _)
+                                               })} -> liftIO (createCategory username c) >> return ()
+    _ -> case fromJust $ text msg of
+           (T.stripPrefix "/list" -> Just _) -> liftIO sendCategories >> return ()
+           (T.stripPrefix "/new" -> Just _) -> sendInlineForceReplyMessage "Choose name for new category" messageId chatId
+           (T.stripPrefix "/delete" -> Just _) -> sendInlineMessage "Choose category to delete" messageId chatId username
+           _ -> liftIO $ putStrLn $ show msg
   return ()
 
 class Fetchable a where
