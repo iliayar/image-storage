@@ -30,6 +30,7 @@ import System.Environment
 import Data.Version (showVersion)
 import qualified Paths_Bot as P
 import System.IO
+import System.FilePath (takeExtension, (<.>))
 import Storage
 
 data Version = Version
@@ -104,45 +105,46 @@ handleUpdate update = do
 handleCallback :: CallbackQuery -> Bot ()
 handleCallback (CallbackQuery
                 { cq_id = cqId
-                , cq_from = (User {user_username = Just username})
-                , cq_message = Just (Message {chat = (Chat {chat_id = chatId}), text = Just (T.lines -> (filename:_))})
-                , cq_data = Just category
+                , cq_from = (User {user_username = Just (T.unpack -> username)})
+                , cq_message = Just (Message { chat = (Chat {chat_id = chatId})
+                                             , text = Just (T.lines -> (filename:_))
+                                             , reply_to_message = Just replMsg
+                                             })
+                , cq_data = Just (T.unpack -> category)
                 }) = do
-  liftIO $ putStrLn $ T.unpack username
-  liftIO $ putStrLn $ T.unpack filename
-  liftIO $ putStrLn $ T.unpack category
+  BotConfig{..} <- ask
+  let host = "https://7ef599ed6e6b.ngrok.io"
+      processDownload (Just (url, filename)) = do
+        liftIO $ downloadImage username category filename url
+        liftIO $ answerCallbackQuery telegramToken (AnswerCallbackQueryRequest cqId (Just "File saved") Nothing Nothing Nothing) manager
+        liftIO $ sendMessage telegramToken (sendMessageRequest (ChatId $ fromIntegral chatId) $ T.pack $ "Your image " ++ host ++ "/static/" ++ username ++ "/test/" ++ filename) manager
+  case replMsg of
+    Message { photo = Just xs } -> (fetchFilePath $ head $ reverse xs) >>= processDownload
+    Message { document = Just x } -> (fetchFilePath x) >>= processDownload
+  return ()
    
 
-sendInlineMessage :: ChatId -> String -> String -> Bot ()
-sendInlineMessage chatId username filename = do
+sendInlineMessage :: Int -> ChatId -> String -> Bot ()
+sendInlineMessage messageId chatId username = do
   BotConfig{..} <- ask
   categories <- liftIO $ listCategories username
   let keyboard = ReplyInlineKeyboardMarkup $ map
         (\t -> [(InlineKeyboardButton (T.pack t) Nothing (Just $ T.pack $ t) Nothing  Nothing Nothing Nothing)]) categories
   liftIO $ sendMessage telegramToken
-    (SendMessageRequest chatId (T.pack $ "`" ++ filename ++ "`\nIngore above") (Just Markdown) Nothing Nothing Nothing (Just keyboard)) manager
-  liftIO $ return ()
+    (SendMessageRequest chatId "Choose the category to save image in" (Just Markdown) Nothing Nothing (Just messageId) (Just keyboard)) manager
+  return ()
 
 handleImageMessage :: Message -> Bot ()
-handleImageMessage msg = do
+handleImageMessage msg@(Message {message_id = messageId}) = do
   BotConfig{..} <- ask
-  let host = "https://bcbc6b25b466.ngrok.io" -- FIXME
-      chatId = ChatId $ fromIntegral $ user_id $ fromJust $ from msg
+  let chatId = ChatId $ fromIntegral $ user_id $ fromJust $ from msg
       username = T.unpack $ fromJust $ user_username $ fromJust $ from msg
-      processDownload (Just (url, filename)) =
-        do
-          -- Send message with keyboard here
-          sendInlineMessage chatId username filename
-          -- liftIO $ sendMessage telegramToken (sendMessageRequest chatId $ T.pack $ "Your image " ++ host ++ "/static/" ++ username ++ "/test/" ++ filename) manager
-          liftIO $ downloadImage username "test" filename url
-  case msg of
-    Message { photo = Just xs } -> (fetchFilePath $ head $ reverse xs) >>= processDownload
-    Message { document = Just x} -> (fetchFilePath x) >>= processDownload
+  sendInlineMessage messageId chatId username
   return ()
     
 
 handleMessage :: Message -> Bot ()
-handleMessage msg = do
+handleMessage msg@(Message {message_id = messageId}) = do
   BotConfig{..} <- ask
   let chatId = ChatId $ fromIntegral $ user_id $ fromJust $ from msg
       username = T.unpack $ fromJust $ user_username $ fromJust $ from msg
@@ -173,7 +175,7 @@ fetchFilePath f = do
   liftIO $ case resp of
     Left err -> return Nothing
     Right (Response {result = File {file_path = Just path}}) -> return $
-      Just ("http://api.telegram.org/file/" ++ (getStringToken telegramToken) ++ "/" ++ (T.unpack path), T.unpack $ getFileId f)
+      Just ("http://api.telegram.org/file/" ++ (getStringToken telegramToken) ++ "/" ++ (T.unpack path), (T.unpack id) <.> (takeExtension $ T.unpack path))
     Right (Response {result = File {file_path = Nothing}}) -> return Nothing
   where
     getStringToken (Token s) = T.unpack s

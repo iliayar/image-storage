@@ -11,13 +11,13 @@
   #+BEGIN_SRC shell
   TELEGRAM_TOKEN="<YOUR_TOKEN>"
   #+END_SRC
-** TODO Task [1/3]
+** TODO Task [3/4]
 - [X] Categories
   - [X] Create
   - [X] Delete
   - [X] List
-- [ ] Reply with keyboard
-- [-] Downloading files
+- [X] Reply with keyboard
+- [X] Downloading files
   - [X] File Download
-  - [ ] Add more error handling
-  - [ ] Integration with inline keyboard
+  - [X] Integration with inline keyboard
+- [ ] Add more error handling
