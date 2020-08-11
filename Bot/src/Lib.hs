@@ -55,11 +55,13 @@ startApp = do
   env <- getEnvironment
   manager' <- newManager tlsManagerSettings
   let telegramToken' = fromJust $ lookup "TELEGRAM_TOKEN" env
+      host' = fromJust $ lookup "WEBHOOK_HOST" env
       config = BotConfig
         { telegramToken = Token $ T.pack $ "bot" <> telegramToken'
         , manager = manager'
+        , host = T.pack host'
         }
-  putStrLn ("Bot token: " ++ telegramToken')
+  setWebhook (telegramToken config) (Just $ (host config) <> "/bot/webhook/bot" <> (T.pack telegramToken')) manager'
   hFlush stdout
   run 3001 $ app config
 
@@ -71,6 +73,7 @@ newtype Bot a = Bot
 data BotConfig = BotConfig
   { telegramToken :: Token
   , manager :: Manager
+  , host :: Text
   }
 
 app :: BotConfig -> Application
@@ -115,13 +118,12 @@ handleCallback (CallbackQuery
                 , cq_data = Just (T.unpack -> category)
                 }) = do
   BotConfig{..} <- ask
-  let host = "https://a8aedc133388.ngrok.io"
-      answerQuery s = answerCallbackQuery telegramToken (AnswerCallbackQueryRequest cqId (Just s) Nothing Nothing Nothing) manager
+  let answerQuery s = answerCallbackQuery telegramToken (AnswerCallbackQueryRequest cqId (Just s) Nothing Nothing Nothing) manager
       processDownload (Just (url, filename)) = liftIO $ do
         downloadImage username category filename url
         answerQuery "File saved"
         sendMessage telegramToken (sendMessageRequest (ChatId $ fromIntegral chatId) $
-                                   T.pack $ "Your image " ++ intercalate "/" [host, "static", username, category, filename]) manager
+                                   T.pack $ "Your image " ++ intercalate "/" [T.unpack host, "static", username, category, filename]) manager
         return ()
   case replMsg of
     Message { photo = Just xs } -> (fetchFilePath $ head $ reverse xs) >>= processDownload
