@@ -98,7 +98,7 @@ handleUpdate update = do
   case update of
       Update {message = Just msg@(Message { photo = Just xs })} -> handleImageMessage msg
       Update {message = Just msg@(Message { document = Just x@(Document { doc_mime_type = Just (T.stripPrefix "image" -> Just _)})})} -> handleImageMessage msg
-      -- Update {message = Just msg@(Message { document = Just x@(Document { doc_mime_type = Just (T.stripPrefix "video" -> Just _)})})} -> handleImageMessage msg
+      Update {message = Just msg@(Message { document = Just x@(Document { doc_mime_type = Just (T.stripPrefix "video" -> Just _)})})} -> handleImageMessage msg
       Update {message = Just msg@(Message { text = Just _}) } -> handleMessage msg
       Update {callback_query = Just q} -> handleCallback q
       _ -> liftIO (putStrLn $ "Handle update failed. " ++ show update)
@@ -117,10 +117,11 @@ handleCallback (CallbackQuery
   BotConfig{..} <- ask
   let host = "https://a8aedc133388.ngrok.io"
       answerQuery s = answerCallbackQuery telegramToken (AnswerCallbackQueryRequest cqId (Just s) Nothing Nothing Nothing) manager
-      processDownload (Just (url, filename)) = do
-        liftIO $ downloadImage username category filename url
-        liftIO $ answerQuery "File saved"
-        liftIO $ sendMessage telegramToken (sendMessageRequest (ChatId $ fromIntegral chatId) $ T.pack $ "Your image " ++ intercalate "/" [host, "static", username, category, filename]) manager
+      processDownload (Just (url, filename)) = liftIO $ do
+        downloadImage username category filename url
+        answerQuery "File saved"
+        sendMessage telegramToken (sendMessageRequest (ChatId $ fromIntegral chatId) $
+                                   T.pack $ "Your image " ++ intercalate "/" [host, "static", username, category, filename]) manager
         return ()
   case replMsg of
     Message { photo = Just xs } -> (fetchFilePath $ head $ reverse xs) >>= processDownload
@@ -167,6 +168,7 @@ handleMessage msg@(Message {message_id = messageId}) = do
   case msg of
     Message { text = Just (T.unpack -> c)
             , reply_to_message = Just (Message { text = Just (T.stripPrefix "Choose name" -> Just _)
+                                               , from = Just (User { user_first_name = "ImageStorage"})
                                                })} -> liftIO (createCategory username c) >> return ()
     _ -> case fromJust $ text msg of
            (T.stripPrefix "/list" -> Just _) -> liftIO sendCategories >> return ()
