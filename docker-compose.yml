@@ -14,11 +14,14 @@ services:
                         - 3000
                 volumes:
                         - ./static:/usr/src/app/static
+                env_file:
+                        - ./.env
         bot:
                 build: ./Bot
                 expose:
                         - 3001
                 env_file:
+                        - ./.env.bot
                         - ./.env
                 volumes:
                         - ./static:/usr/src/app/static

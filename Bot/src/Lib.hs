@@ -12,27 +12,35 @@ module Lib
     , app
     ) where
 
+import Storage
+
 import Data.Aeson
-import Network.Wai
-import Network.Wai.Handler.Warp
-import Servant
-import GHC.Generics hiding (from)
-import Control.Monad.Reader
-import Control.Monad.Except
-import Data.Text (Text)
-import Data.List
-import qualified Data.Text as T
-import Network.HTTP.Client (newManager, Manager)
-import Network.HTTP.Client.TLS  (tlsManagerSettings)
 import Data.Maybe
 import Data.Monoid
-import Web.Telegram.API.Bot
-import System.Environment
+import Data.Text (Text)
+import Data.List
 import Data.Version (showVersion)
-import qualified Paths_Bot as P
+import qualified Data.Text as T
+
+import Control.Monad.Reader
+import Control.Monad.Except
+
 import System.IO
+import System.Environment
 import System.FilePath (takeExtension, (<.>))
-import Storage
+
+import GHC.Generics hiding (from)
+
+import Network.Wai
+import Network.Wai.Handler.Warp
+import Network.HTTP.Client (newManager, Manager)
+import Network.HTTP.Client.TLS  (tlsManagerSettings)
+
+import Servant
+
+import Web.Telegram.API.Bot
+
+import qualified Paths_Bot as P
 
 data Version = Version
   { version :: Text
@@ -46,6 +54,27 @@ type BotAPI = "version" :> Get '[JSON] Version
               :> ReqBody '[JSON] Update
               :> Post '[JSON] ()
 
+class Fetchable a where
+  getFileId :: a -> Text
+
+instance Fetchable PhotoSize where
+  getFileId PhotoSize { photo_file_id = id } = id
+
+instance Fetchable Document where
+  getFileId Document { doc_file_id = id } = id
+
+newtype Bot a = Bot
+    { runBot :: ReaderT BotConfig Handler a
+    } deriving ( Functor, Applicative, Monad, MonadIO,
+                 MonadReader BotConfig, MonadError ServantErr)
+
+data BotConfig = BotConfig
+  { telegramToken :: Token
+  , manager :: Manager
+  , host :: Text
+  , botName :: Text
+  }
+
 botApi :: Proxy BotAPI
 botApi = Proxy
 
@@ -55,26 +84,17 @@ startApp = do
   env <- getEnvironment
   manager' <- newManager tlsManagerSettings
   let telegramToken' = fromJust $ lookup "TELEGRAM_TOKEN" env
-      host' = fromJust $ lookup "WEBHOOK_HOST" env
+      host' = fromJust $ lookup "WEB_HOST" env
+      botName' = fromJust $ lookup "TELEGRAM_BOT_NAME" env
       config = BotConfig
         { telegramToken = Token $ T.pack $ "bot" <> telegramToken'
         , manager = manager'
         , host = T.pack host'
+        , botName = T.pack botName'
         }
-  setWebhook (telegramToken config) (Just $ (host config) <> "/bot/webhook/bot" <> (T.pack telegramToken')) manager'
+  setWebhook (telegramToken config) (Just $ "https://" <> (host config) <> "/bot/webhook/bot" <> (T.pack telegramToken')) manager'
   hFlush stdout
   run 3001 $ app config
-
-newtype Bot a = Bot
-    { runBot :: ReaderT BotConfig Handler a
-    } deriving ( Functor, Applicative, Monad, MonadIO, -- classes from base and transformers
-                 MonadReader BotConfig, MonadError ServantErr) -- classes from mtl for
-
-data BotConfig = BotConfig
-  { telegramToken :: Token
-  , manager :: Manager
-  , host :: Text
-  }
 
 app :: BotConfig -> Application
 app config = serve botApi $ initBotServer config
@@ -170,7 +190,7 @@ handleMessage msg@(Message {message_id = messageId}) = do
   case msg of
     Message { text = Just (T.unpack -> c)
             , reply_to_message = Just (Message { text = Just (T.stripPrefix "Choose name" -> Just _)
-                                               , from = Just (User { user_first_name = "ImageStorage"})
+                                               , from = Just (User { user_first_name = botName})
                                                })} -> liftIO (createCategory username c) >> return ()
     _ -> case fromJust $ text msg of
            (T.stripPrefix "/list" -> Just _) -> liftIO sendCategories >> return ()
@@ -178,15 +198,6 @@ handleMessage msg@(Message {message_id = messageId}) = do
            (T.stripPrefix "/delete" -> Just _) -> sendInlineMessage "Choose category to delete" messageId chatId username
            _ -> liftIO $ putStrLn $ show msg
   return ()
-
-class Fetchable a where
-  getFileId :: a -> Text
-
-instance Fetchable PhotoSize where
-  getFileId PhotoSize { photo_file_id = id } = id
-
-instance Fetchable Document where
-  getFileId Document { doc_file_id = id } = id
 
 fetchFilePath :: Fetchable a => a -> Bot (Maybe (String, String))
 fetchFilePath f = do
