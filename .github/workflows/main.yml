@@ -12,7 +12,9 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
-    - run: echo "123456789:abcdefghijklmoonpqrstuvwxyz" > .env
+    - run: echo "TELEGRAM_TOKEN='123456789:abcdefghijklmoonpqrstuvwxyz' \
+                 TELEGRAM_BOT_NAME='TEST'" > .env.bot
+           echo "WEB_HOST=example.com" > .env
     - run: docker-compose pull
     - uses: satackey/action-docker-layer-caching@v0.0.5
     - name: Docker build
