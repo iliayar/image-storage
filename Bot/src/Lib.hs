@@ -160,22 +160,29 @@ sendInlineForceReplyMessage text messageId chatId = do
   return ()
   
 
-sendInlineMessage :: Text -> Int -> ChatId -> String -> Bot ()
-sendInlineMessage text messageId chatId username = do
+sendInlineMessage :: Text -> Int -> ChatId -> String -> (Text -> String -> Text -> InlineKeyboardButton) -> Bot ()
+sendInlineMessage text messageId chatId username makeButton= do
   BotConfig{..} <- ask
   categories <- liftIO $ listCategories username
   let keyboard = ReplyInlineKeyboardMarkup $ map
-        (\t -> [(InlineKeyboardButton (T.pack t) Nothing (Just $ T.pack $ t) Nothing  Nothing Nothing Nothing)]) categories
+        (\t -> [makeButton host username $ T.pack t]) categories
   liftIO $ sendMessage telegramToken
     (SendMessageRequest chatId text Nothing Nothing Nothing (Just messageId) (Just keyboard)) manager
   return ()
+
+callbackInlineKeyboardButton :: Text -> String -> Text -> InlineKeyboardButton
+callbackInlineKeyboardButton _ _ t = (InlineKeyboardButton t Nothing (Just t) Nothing  Nothing Nothing Nothing)
+
+linkInlineKeyboardButton :: Text -> String -> Text -> InlineKeyboardButton
+linkInlineKeyboardButton host user t = (InlineKeyboardButton t (Just url) Nothing Nothing  Nothing Nothing Nothing)
+  where url = "https://" <> host <> "/storage/" <> (T.pack user) <> "/" <> t
 
 handleImageMessage :: Message -> Bot ()
 handleImageMessage msg@(Message {message_id = messageId}) = do
   BotConfig{..} <- ask
   let chatId = ChatId $ fromIntegral $ user_id $ fromJust $ from msg
       username = T.unpack $ fromJust $ user_username $ fromJust $ from msg
-  sendInlineMessage "Choose category to save image in" messageId chatId username
+  sendInlineMessage "Choose category to save image in" messageId chatId username callbackInlineKeyboardButton
   return ()
     
 
@@ -194,8 +201,9 @@ handleMessage msg@(Message {message_id = messageId}) = do
                                                })} -> liftIO (createCategory username c) >> return ()
     _ -> case fromJust $ text msg of
            (T.stripPrefix "/list" -> Just _) -> liftIO sendCategories >> return ()
+           (T.stripPrefix "/browse" -> Just _) -> sendInlineMessage "Get link for category" messageId chatId username linkInlineKeyboardButton
            (T.stripPrefix "/new" -> Just _) -> sendInlineForceReplyMessage "Choose name for new category" messageId chatId
-           (T.stripPrefix "/delete" -> Just _) -> sendInlineMessage "Choose category to delete" messageId chatId username
+           (T.stripPrefix "/delete" -> Just _) -> sendInlineMessage "Choose category to delete" messageId chatId username callbackInlineKeyboardButton
            _ -> liftIO $ putStrLn $ show msg
   return ()
 

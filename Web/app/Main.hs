@@ -1,5 +1,5 @@
-import Hello
+import App
 
 import Yesod.Core (warp)
 
-main = warp 3000 Hello
+main = warp 3000 App

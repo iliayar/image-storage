@@ -1,25 +1,33 @@
 
 # Table of Contents
 
-1.  [Image Storage](#orgadc4dc4)
-    1.  [Web application](#orgc255650)
-    2.  [Telegram Bot](#org2d47891)
-    3.  [Task <code>[3/4]</code>](#org1f48c65)
+1.  [Image Storage](#orgb98d4e2)
+    1.  [Web application](#orgd98ace7)
+        1.  [Tasks <code>[0/1]</code>](#org0349a6c)
+    2.  [Telegram Bot](#org62ec79f)
+    3.  [Task <code>[3/4]</code>](#orgbd7ce4c)
 
 
-<a id="orgadc4dc4"></a>
+<a id="orgb98d4e2"></a>
 
 # Image Storage
 
 ![img](https://github.com/iliayar/image-storage/workflows/build/badge.svg)
 
 
-<a id="orgc255650"></a>
+<a id="orgd98ace7"></a>
 
 ## Web application
 
 
-<a id="org2d47891"></a>
+<a id="org0349a6c"></a>
+
+### TODO Tasks <code>[0/1]</code>
+
+-   [ ] Add styles?
+
+
+<a id="org62ec79f"></a>
 
 ## Telegram Bot
 
@@ -36,7 +44,7 @@
         WEB_HOST="<YOUR_HOSTNAME>"
 
 
-<a id="org1f48c65"></a>
+<a id="orgbd7ce4c"></a>
 
 ## TODO Task <code>[3/4]</code>
 
