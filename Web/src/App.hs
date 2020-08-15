@@ -30,11 +30,11 @@ instance Yesod App where
 
 renderMedia user category (Image file) =
   [whamlet|
-          <img src=#{mediaLink user category file}>
+          <img class="media" src=#{mediaLink user category file}>
           |]
 renderMedia user category (Video file) =
   [whamlet|
-          <video autoplay loop muted playsinline src=#{mediaLink user category file}>
+          <video class="media" autoplay loop muted playsinline src=#{mediaLink user category file}>
           |]
 renderMedia user category (Unknown file) =
   [whamlet|
@@ -45,6 +45,13 @@ getStorageR :: Text -> Text -> Handler Html
 getStorageR user category = defaultLayout $ do
   media <- liftIO $ listMedia user category
   setTitle $ "Storage"
+  toWidget [lucius|
+                  .media {
+                      max-width: 20%;
+                      width: 100%;
+                      display: inline;
+                  }
+                  |]
   toWidget [hamlet|
                    <h1>#{user}
                    <h2>#{category}|]
