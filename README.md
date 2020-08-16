@@ -1,33 +1,33 @@
 
 # Table of Contents
 
-1.  [Image Storage](#orge9799ad)
-    1.  [Web application](#org369ed6b)
-        1.  [Tasks <code>[1/1]</code>](#orgab5565e)
-    2.  [Telegram Bot](#orgdeecddf)
-        1.  [Tasks <code>[3/4]</code>](#org21867dd)
+1.  [Image Storage](#org559b107)
+    1.  [Web application](#org77d2719)
+        1.  [Tasks <code>[0/1]</code>](#org9cc2026)
+    2.  [Telegram Bot](#orgb2476bf)
+        1.  [Tasks <code>[3/4]</code>](#org0cd7d25)
 
 
-<a id="orge9799ad"></a>
+<a id="org559b107"></a>
 
 # Image Storage
 
 ![img](https://github.com/iliayar/image-storage/workflows/build/badge.svg)
 
 
-<a id="org369ed6b"></a>
+<a id="org77d2719"></a>
 
 ## Web application
 
 
-<a id="orgab5565e"></a>
+<a id="org9cc2026"></a>
 
-### TODO Tasks <code>[1/1]</code>
+### TODO Tasks <code>[0/1]</code>
 
--   [X] Add styles?
+-   [ ] Add styles?
 
 
-<a id="orgdeecddf"></a>
+<a id="orgb2476bf"></a>
 
 ## Telegram Bot
 
@@ -38,13 +38,15 @@
 -   create *.env.bot* file:
     
         TELEGRAM_TOKEN="<YOUR_TOKEN>"
-        TELEGTAM_BOT_NAME="<YOUR_BOT_NAME>"
+        TELEGRAM_BOT_NAME="<YOUR_BOT_NAME>"
 -   create *.env* file:
     
         WEB_HOST="<YOUR_HOSTNAME>"
 
+**In .env files, on ubuntu double qoutes includes in variable**
 
-<a id="org21867dd"></a>
+
+<a id="org0cd7d25"></a>
 
 ### TODO Tasks <code>[3/4]</code>
 
