@@ -22,6 +22,7 @@ mediaLink user category file = "/static/" <> user <> "/" <> category <> "/" <> f
 
 data App = App
 mkYesod "App" [parseRoutes|
+/storage/#Text UserStorageR GET
 /storage/#Text/#Text StorageR GET
 |]
 
@@ -43,10 +44,7 @@ renderMedia user category (Unknown file) =
           <a href=#{mediaLink user category file}>#{file}
           |]
 
-getStorageR :: Text -> Text -> Handler Html
-getStorageR user category = defaultLayout $ do
-  media <- liftIO $ listMedia user category
-  setTitle $ "Storage"
+mediaCssWidget = 
   toWidget [lucius|
                   .media {
                       max-width: 20%;
@@ -54,6 +52,24 @@ getStorageR user category = defaultLayout $ do
                       display: inline;
                   }
                   |]
+
+getUserStorageR :: Text -> Handler Html
+getUserStorageR user = defaultLayout $ do
+  media <- liftIO $ listUserMedia user
+  setTitle $ "User storage"
+  mediaCssWidget
+  toWidget [hamlet|
+                  <h1>#{user}
+                  |]
+  toWidget [whamlet|
+                   $forall (category, m) <- media
+                     ^{renderMedia user category m}|]
+  
+getStorageR :: Text -> Text -> Handler Html
+getStorageR user category = defaultLayout $ do
+  media <- liftIO $ listMedia user category
+  setTitle $ "Storage"
+  mediaCssWidget
   toWidget [hamlet|
                    <h1>#{user}
                    <h2>#{category}|]
@@ -74,3 +90,9 @@ listMedia :: Text -> Text -> IO [Media]
 listMedia user category = do
   media <- listDirectory $ "static" </>  (T.unpack user) </> (T.unpack category)
   mapM (return . toMedia) media
+
+listUserMedia :: Text -> IO [(Text, Media)]
+listUserMedia user = do
+  cs <- listDirectory $ "static" </> (T.unpack user)
+  fmap concat $ mapM (\ c -> listMedia user c >>= mapM (\ m -> return (c, m))) $ map T.pack cs
+  
