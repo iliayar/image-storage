@@ -30,11 +30,13 @@ instance Yesod App where
 
 renderMedia user category (Image file) =
   [whamlet|
-          <img class="media" src=#{mediaLink user category file}>
+          $with url <- mediaLink user category file
+            <a href=#{url}><img class="media" src=#{url}>
           |]
 renderMedia user category (Video file) =
   [whamlet|
-          <video class="media" autoplay loop muted playsinline src=#{mediaLink user category file}>
+          $with url <- mediaLink user category file
+            <a href=#{url}><video class="media" autoplay loop muted playsinline src=#{url}>
           |]
 renderMedia user category (Unknown file) =
   [whamlet|
