@@ -17,7 +17,7 @@ import Data.Char
 
 checkTraversal :: [FilePath] -> a -> IO a -> IO a
 checkTraversal fs fail action =
-  if all (all (isAlphaNum || (=='_'))) fs
+  if all (all (\x -> (isAlphaNum x) || (x == '_'))) fs
   then action
   else return fail
 
