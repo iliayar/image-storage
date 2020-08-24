@@ -63,6 +63,9 @@ instance Fetchable PhotoSize where
 instance Fetchable Document where
   getFileId Document { doc_file_id = id } = id
 
+instance Fetchable Video where
+  getFileId Video { vide_file_id = id } = id
+
 newtype Bot a = Bot
     { runBot :: ReaderT BotConfig Handler a
     } deriving ( Functor, Applicative, Monad, MonadIO,
@@ -120,6 +123,7 @@ handleUpdate :: Update -> Bot ()
 handleUpdate update = do
   case update of
       Update {message = Just msg@(Message { photo = Just xs })} -> handleImageMessage msg
+      Update {message = Just msg@(Message { video = Just xs })} -> handleImageMessage msg
       Update {message = Just msg@(Message { document = Just x@(Document { doc_mime_type = Just (T.stripPrefix "image" -> Just _)})})} -> handleImageMessage msg
       Update {message = Just msg@(Message { document = Just x@(Document { doc_mime_type = Just (T.stripPrefix "video" -> Just _)})})} -> handleImageMessage msg
       Update {message = Just msg@(Message { text = Just _}) } -> handleMessage msg
@@ -147,6 +151,7 @@ handleCallback (CallbackQuery
         return ()
   case replMsg of
     Message { photo = Just xs } -> (fetchFilePath $ head $ reverse xs) >>= processDownload
+    Message { video = Just x } -> (fetchFilePath x) >>= processDownload
     Message { document = Just x } -> (fetchFilePath x) >>= processDownload
     Message { text = Just (T.stripPrefix "/delete" -> Just _)} -> liftIO $ deleteCategory username category >> answerQuery "Category deleted" >> return ()
   return ()
