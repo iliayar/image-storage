@@ -64,7 +64,7 @@ instance Fetchable Document where
   getFileId Document { doc_file_id = id } = id
 
 instance Fetchable Video where
-  getFileId Video { vide_file_id = id } = id
+  getFileId Video { video_file_id = id } = id
 
 newtype Bot a = Bot
     { runBot :: ReaderT BotConfig Handler a
