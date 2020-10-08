@@ -48,9 +48,9 @@ deleteCategory user c = checkTraversal [user, c] () $ do
     Left err -> putStrLn (show err) >> return ()
     Right _ -> return ()
 
-deleteImage :: FilePath -> FilePath -> FilePath -> IO ()
-deleteImage user c filename = checkTraversal [user, c] () $ do
-  res <- try $ removeFile $ "static" </> user </> c </> filename :: IO (Either IOError ())
+deleteImage :: FilePath -> FilePath -> IO ()
+deleteImage user filename = checkTraversal [user, c] () $ do
+  res <- try $ removeFile $ "static" </> user </> filename :: IO (Either IOError ())
   case res of
     Left err -> putStrLn (show err) >> return ()
     Right _ -> return ()

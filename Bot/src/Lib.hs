@@ -154,7 +154,6 @@ handleCallback (CallbackQuery
     Message { video = Just x } -> (fetchFilePath x) >>= processDownload
     -- Message { document = Just x } -> (fetchFilePath x) >>= processDownload
     Message { text = Just (T.stripPrefix "/delete" -> Just "")} -> liftIO $ deleteCategory username category >> answerQuery "Category deleted" >> return ()
-    Message { text = Just (T.stripPrefix "/delete_image" -> Just "")} -> liftIO $ deleteImage username category (T.unpack filename) >> answerQuery "Image deleted" >> return ()
   return ()
    
 
@@ -205,12 +204,17 @@ handleMessage msg@(Message {message_id = messageId}) = do
             , reply_to_message = Just (Message { text = Just (T.stripPrefix "Choose name" -> Just _)
                                                , from = Just (User { user_first_name = botName})
                                                })} -> liftIO (createCategory username c) >> return ()
+    Message { text = Just (T.unpack -> filename)
+            , reply_to_message = Just (Message { text = Just (T.stripPrefix "Choose image" -> Just _)
+                                               , from = Just (User { user_first_name = botName})
+                                               })} -> liftIO (deleteImage username filename) >> return ()
     _ -> case fromJust $ text msg of
            (T.stripPrefix "/list" -> Just _) -> liftIO sendCategories >> return ()
            (T.stripPrefix "/browse" -> Just _) -> sendInlineMessage "Get link for category" messageId chatId username linkInlineKeyboardButton
            (T.stripPrefix "/new" -> Just _) -> sendInlineForceReplyMessage "Choose name for new category" messageId chatId
            (T.stripPrefix "/delete" -> Just "") -> sendInlineMessage "Choose category to delete" messageId chatId username callbackInlineKeyboardButton
-           (T.stripPrefix "/delete_image" -> Just "") -> sendInlineForceReplyMessage "Choose image to delete. Enter file name from url" messageId chatId
+  -- FIXME: Please
+           (T.stripPrefix "/delete_image" -> Just "") -> sendInlineForceReplyMessage "Choose image to delete. Enter <categroy>/<file> from url" messageId chatId
            _ -> liftIO $ putStrLn $ show msg
   return ()
 
