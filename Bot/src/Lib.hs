@@ -153,7 +153,8 @@ handleCallback (CallbackQuery
     Message { photo = Just xs } -> (fetchFilePath $ head $ reverse xs) >>= processDownload
     Message { video = Just x } -> (fetchFilePath x) >>= processDownload
     -- Message { document = Just x } -> (fetchFilePath x) >>= processDownload
-    Message { text = Just (T.stripPrefix "/delete" -> Just _)} -> liftIO $ deleteCategory username category >> answerQuery "Category deleted" >> return ()
+    Message { text = Just (T.stripPrefix "/delete" -> Just "")} -> liftIO $ deleteCategory username category >> answerQuery "Category deleted" >> return ()
+    Message { text = Just (T.stripPrefix "/delete_image" -> Just "")} -> liftIO $ deleteCategory username category >> answerQuery "Category deleted" >> return ()
   return ()
    
 
@@ -209,6 +210,7 @@ handleMessage msg@(Message {message_id = messageId}) = do
            (T.stripPrefix "/browse" -> Just _) -> sendInlineMessage "Get link for category" messageId chatId username linkInlineKeyboardButton
            (T.stripPrefix "/new" -> Just _) -> sendInlineForceReplyMessage "Choose name for new category" messageId chatId
            (T.stripPrefix "/delete" -> Just _) -> sendInlineMessage "Choose category to delete" messageId chatId username callbackInlineKeyboardButton
+           (T.stripPrefix "/delete_image" -> Just _) -> sendInlineForceReplyMessage "Choose image to delete. Enter file name from url" messageId chatId
            _ -> liftIO $ putStrLn $ show msg
   return ()
 
