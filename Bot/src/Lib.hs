@@ -214,7 +214,7 @@ handleMessage msg@(Message {message_id = messageId}) = do
            (T.stripPrefix "/new" -> Just _) -> sendInlineForceReplyMessage "Choose name for new category" messageId chatId
            (T.stripPrefix "/delete" -> Just "") -> sendInlineMessage "Choose category to delete" messageId chatId username callbackInlineKeyboardButton
   -- FIXME: Please
-           (T.stripPrefix "/delete_image" -> Just "") -> sendInlineForceReplyMessage "Choose image to delete. Enter <categroy>/<file> from url" messageId chatId
+           (T.stripPrefix "/delete_image" -> Just "") -> sendInlineForceReplyMessage "Choose image to delete. Enter <categroy> <file> from url" messageId chatId
            _ -> liftIO $ putStrLn $ show msg
   return ()
 

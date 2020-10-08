@@ -15,6 +15,7 @@ import System.IO.Error
 import Control.Monad
 import Control.Exception
 import Data.Char
+import Data.List.Split
 
 checkTraversal :: [FilePath] -> a -> IO a -> IO a
 checkTraversal fs fail action =
@@ -49,7 +50,7 @@ deleteCategory user c = checkTraversal [user, c] () $ do
     Right _ -> return ()
 
 deleteImage :: FilePath -> FilePath -> IO ()
-deleteImage user filename = checkTraversal [user, c] () $ do
+deleteImage user filename = checkTraversal ([user] ++ (splitOn " " filename)) () $ do
   res <- try $ removeFile $ "static" </> user </> filename :: IO (Either IOError ())
   case res of
     Left err -> putStrLn (show err) >> return ()
