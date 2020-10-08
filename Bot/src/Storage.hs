@@ -3,6 +3,7 @@ module Storage
   , createCategory
   , deleteCategory
   , downloadImage
+  , deleteImage
   )
   
 where
