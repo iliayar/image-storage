@@ -209,8 +209,8 @@ handleMessage msg@(Message {message_id = messageId}) = do
            (T.stripPrefix "/list" -> Just _) -> liftIO sendCategories >> return ()
            (T.stripPrefix "/browse" -> Just _) -> sendInlineMessage "Get link for category" messageId chatId username linkInlineKeyboardButton
            (T.stripPrefix "/new" -> Just _) -> sendInlineForceReplyMessage "Choose name for new category" messageId chatId
-           (T.stripPrefix "/delete" -> Just _) -> sendInlineMessage "Choose category to delete" messageId chatId username callbackInlineKeyboardButton
-           (T.stripPrefix "/delete_image" -> Just _) -> sendInlineForceReplyMessage "Choose image to delete. Enter file name from url" messageId chatId
+           (T.stripPrefix "/delete" -> Just "") -> sendInlineMessage "Choose category to delete" messageId chatId username callbackInlineKeyboardButton
+           (T.stripPrefix "/delete_image" -> Just "") -> sendInlineForceReplyMessage "Choose image to delete. Enter file name from url" messageId chatId
            _ -> liftIO $ putStrLn $ show msg
   return ()
 
