@@ -154,7 +154,7 @@ handleCallback (CallbackQuery
     Message { video = Just x } -> (fetchFilePath x) >>= processDownload
     -- Message { document = Just x } -> (fetchFilePath x) >>= processDownload
     Message { text = Just (T.stripPrefix "/delete" -> Just "")} -> liftIO $ deleteCategory username category >> answerQuery "Category deleted" >> return ()
-    Message { text = Just (T.stripPrefix "/delete_image" -> Just "")} -> liftIO $ deleteCategory username category >> answerQuery "Category deleted" >> return ()
+    Message { text = Just (T.stripPrefix "/delete_image" -> Just "")} -> liftIO $ deleteImage username category filename >> answerQuery "Image deleted" >> return ()
   return ()
    
 

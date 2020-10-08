@@ -17,7 +17,7 @@ import Data.Char
 
 checkTraversal :: [FilePath] -> a -> IO a -> IO a
 checkTraversal fs fail action =
-  if all (all (\x -> (isAlphaNum x) || (x == '_'))) fs
+  if all (all (\x -> (isAlphaNum x) || (x `elem` "_-."))) fs
   then action
   else return fail
 
@@ -43,6 +43,13 @@ createCategory user c = checkTraversal [user, c] () $ do
 deleteCategory :: FilePath -> FilePath -> IO ()
 deleteCategory user c = checkTraversal [user, c] () $ do
   res <- try $ removeDirectoryRecursive $ "static" </> user </> c :: IO (Either IOError ())
+  case res of
+    Left err -> putStrLn (show err) >> return ()
+    Right _ -> return ()
+
+deleteImage :: FilePath -> FilePath -> FilePath -> IO ()
+deleteImage user c filename = checkTraversal [user, c] () $ do
+  res <- try $ removeFile $ "static" </> user </> c </> filename :: IO (Either IOError ())
   case res of
     Left err -> putStrLn (show err) >> return ()
     Right _ -> return ()
